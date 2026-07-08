@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Platform, Scope, setIcon } from "obsidian";
+    import { Menu, Platform, Scope, setIcon } from "obsidian";
     import { SOURCE_CONTROL_VIEW_CONFIG } from "src/constants";
     import type ObsidianGit from "src/main";
     import type {
@@ -8,7 +8,7 @@
         StatusRootTreeItem,
     } from "src/types";
     import { FileType } from "src/types";
-    import { arrayProxyWithNewLength, getDisplayPath } from "src/utils";
+    import { arrayProxyWithNewLength, getDisplayPath, plural } from "src/utils";
     import { slide } from "svelte/transition";
     import FileComponent from "./components/fileComponent.svelte";
     import PulledFileComponent from "./components/pulledFileComponent.svelte";
@@ -36,6 +36,7 @@
     let stagedOpen = $state(true);
     let lastPulledFilesOpen = $state(true);
     let unPushedCommits = $state(0);
+    let currentBranch: string | undefined = $state();
     let stagedClosed: Record<string, boolean> = $state({});
     let unstagedClosed: Record<string, boolean> = $state({});
     let pulledClosed: Record<string, boolean> = $state({});
@@ -128,9 +129,11 @@
     async function refresh(): Promise<void> {
         if (!plugin.gitReady) {
             status = undefined;
+            currentBranch = undefined;
             return;
         }
         unPushedCommits = await plugin.gitManager.getUnpushedCommits();
+        currentBranch = (await plugin.gitManager.branchInfo()).current;
 
         status = plugin.cachedStatus;
         loading = false;
@@ -178,7 +181,7 @@
         view.app.workspace.trigger("obsidian-git:refresh");
     }
 
-    function stageAll(event: MouseEvent) {
+    function stageAll(event: Event) {
         event.stopPropagation();
         loading = true;
         plugin.promiseQueue.addTask(() =>
@@ -188,7 +191,7 @@
         );
     }
 
-    function unstageAll(event: MouseEvent) {
+    function unstageAll(event: Event) {
         event.stopPropagation();
         loading = true;
         plugin.promiseQueue.addTask(() =>
@@ -215,6 +218,70 @@
         void plugin.discardAll();
     }
 
+    function switchBranch() {
+        void plugin.switchBranch();
+    }
+
+    function toggleLayout() {
+        showTree = !showTree;
+        plugin.settings.treeStructure = showTree;
+        void plugin.saveSettings();
+    }
+
+    function openMoreActionsMenu(event: MouseEvent) {
+        const menu = new Menu();
+        menu.addItem((item) =>
+            item
+                .setTitle("Commit and sync")
+                .setIcon("arrow-up-circle")
+                .onClick(commitAndSync)
+        );
+        menu.addItem((item) =>
+            item.setTitle("Pull").setIcon("download").onClick(pull)
+        );
+        menu.addSeparator();
+        menu.addItem((item) =>
+            item
+                .setTitle("Stage all changes")
+                .setIcon("plus-circle")
+                .onClick(stageAll)
+        );
+        menu.addItem((item) =>
+            item
+                .setTitle("Unstage all changes")
+                .setIcon("minus-circle")
+                .onClick(unstageAll)
+        );
+        menu.addItem((item) =>
+            item
+                .setTitle("Discard all changes")
+                .setIcon("undo")
+                .setWarning(true)
+                .onClick(discard)
+        );
+        menu.addSeparator();
+        menu.addItem((item) =>
+            item
+                .setTitle(
+                    showTree ? "Switch to list view" : "Switch to tree view"
+                )
+                .setIcon(showTree ? "list" : "folder")
+                .onClick(toggleLayout)
+        );
+        menu.showAtMouseEvent(event);
+    }
+
+    function openCommitOptionsMenu(event: MouseEvent) {
+        const menu = new Menu();
+        menu.addItem((item) =>
+            item
+                .setTitle("Commit and sync")
+                .setIcon("arrow-up-circle")
+                .onClick(commitAndSync)
+        );
+        menu.showAtMouseEvent(event);
+    }
+
     let rows = $derived((commitMessage.match(/\n/g) || []).length + 1 || 1);
 </script>
 
@@ -222,76 +289,55 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <main data-type={SOURCE_CONTROL_VIEW_CONFIG.type} class="git-view">
     <div class="nav-header">
-        <div class="nav-buttons-container">
-            <div
-                id="backup-btn"
-                data-icon="arrow-up-circle"
-                class="clickable-icon nav-action-button"
-                aria-label="Commit-and-sync"
-                bind:this={buttons[0]}
-                onclick={commitAndSync}
-            ></div>
-            <div
-                id="commit-btn"
-                data-icon="check"
-                class="clickable-icon nav-action-button"
-                aria-label="Commit"
-                bind:this={buttons[1]}
-                onclick={commit}
-            ></div>
-            <div
-                id="stage-all"
-                class="clickable-icon nav-action-button"
-                data-icon="plus-circle"
-                aria-label="Stage all"
-                bind:this={buttons[2]}
-                onclick={stageAll}
-            ></div>
-            <div
-                id="unstage-all"
-                class="clickable-icon nav-action-button"
-                data-icon="minus-circle"
-                aria-label="Unstage all"
-                bind:this={buttons[3]}
-                onclick={unstageAll}
-            ></div>
-            <div
-                id="push"
-                class="clickable-icon nav-action-button"
-                data-icon="upload"
-                aria-label="Push"
-                bind:this={buttons[4]}
-                onclick={push}
-            ></div>
-            <div
-                id="pull"
-                class="clickable-icon nav-action-button"
-                data-icon="download"
-                aria-label="Pull"
-                bind:this={buttons[5]}
-                onclick={pull}
-            ></div>
-            <div
-                id="layoutChange"
-                class="clickable-icon nav-action-button"
-                aria-label="Change Layout"
-                data-icon={showTree ? "list" : "folder"}
-                bind:this={buttons[6]}
-                onclick={() => {
-                    showTree = !showTree;
-                    setIcon(buttons[6], showTree ? "list" : "folder");
-                    plugin.settings.treeStructure = showTree;
-                    void plugin.saveSettings();
-                }}
-            ></div>
+        <div class="nav-buttons-container git-toolbar">
+            {#if currentBranch}
+                <div
+                    class="git-branch-pill clickable-icon"
+                    aria-label="Switch branch"
+                    onclick={switchBranch}
+                >
+                    <div
+                        class="git-branch-pill-icon"
+                        data-icon="git-branch"
+                        bind:this={buttons[0]}
+                    ></div>
+                    <span class="git-branch-pill-label">{currentBranch}</span>
+                </div>
+            {/if}
+            <div class="git-toolbar-spacer"></div>
             <div
                 id="refresh"
                 class="clickable-icon nav-action-button"
                 class:loading
                 data-icon="refresh-cw"
                 aria-label="Refresh"
-                bind:this={buttons[7]}
+                bind:this={buttons[1]}
                 onclick={triggerRefresh}
+            ></div>
+            <div
+                class="git-toolbar-item"
+                aria-label={unPushedCommits > 0
+                    ? `Push (${plural(unPushedCommits, "commit")} ahead)`
+                    : "Push"}
+            >
+                <div
+                    id="push"
+                    class="clickable-icon nav-action-button"
+                    data-icon="upload"
+                    bind:this={buttons[2]}
+                    onclick={push}
+                ></div>
+                {#if unPushedCommits > 0}
+                    <span class="git-badge">{unPushedCommits}</span>
+                {/if}
+            </div>
+            <div
+                id="more-actions"
+                class="clickable-icon nav-action-button"
+                data-icon="more-horizontal"
+                aria-label="More actions"
+                bind:this={buttons[3]}
+                onclick={openMoreActionsMenu}
             ></div>
         </div>
     </div>
@@ -310,6 +356,24 @@
                 aria-label={"Clear"}
             ></div>
         {/if}
+    </div>
+    <div class="git-commit-actions">
+        <button
+            id="commit-btn"
+            class="mod-cta git-commit-button"
+            aria-label="Commit (Ctrl+Enter for commit and sync)"
+            onclick={commit}
+        >
+            Commit{#if status && status.staged.length > 0}
+                &nbsp;({status.staged.length}){/if}
+        </button>
+        <button
+            class="mod-cta git-commit-dropdown-toggle clickable-icon"
+            aria-label="More commit actions"
+            data-icon="chevron-down"
+            bind:this={buttons[4]}
+            onclick={openCommitOptionsMenu}
+        ></button>
     </div>
 
     <div class="nav-files-container" style="position: relative;">
@@ -642,6 +706,88 @@
         justify-content: center;
         align-items: center;
         transition: color 0.15s ease-in-out;
+    }
+
+    .git-toolbar {
+        display: flex;
+        align-items: center;
+        gap: var(--size-2-1);
+    }
+
+    .git-toolbar-spacer {
+        flex: 1 1 auto;
+    }
+
+    .git-toolbar-item {
+        position: relative;
+        display: flex;
+    }
+
+    .git-branch-pill {
+        display: flex;
+        align-items: center;
+        gap: var(--size-2-1);
+        padding: 2px var(--size-4-2);
+        border-radius: var(--radius-s);
+        background-color: var(--interactive-accent);
+        color: var(--text-on-accent);
+        font-size: var(--font-ui-smaller);
+        overflow: hidden;
+
+        &:hover {
+            background-color: var(--interactive-accent-hover);
+        }
+    }
+
+    .git-branch-pill-icon {
+        display: flex;
+        flex: 0 0 auto;
+    }
+
+    .git-branch-pill-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .git-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        min-width: 14px;
+        height: 14px;
+        padding: 0 3px;
+        border-radius: 999px;
+        background-color: var(--interactive-accent);
+        color: var(--text-on-accent);
+        font-size: var(--font-ui-smaller);
+        line-height: 14px;
+        text-align: center;
+        pointer-events: none;
+    }
+
+    .git-commit-actions {
+        display: flex;
+        width: calc(100% - var(--size-4-8));
+        margin: 0 auto var(--size-4-2) auto;
+    }
+
+    .git-commit-button {
+        flex: 1 1 auto;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .git-commit-dropdown-toggle {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        padding: 0;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-left: 1px solid var(--background-modifier-border);
     }
 
     .git-commit-msg-clear-button:after {

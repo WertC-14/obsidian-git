@@ -30,6 +30,11 @@ jobs:
                   cp main.js manifest.json styles.css ${{ env.PLUGIN_NAME }}
                   zip -r ${{ env.PLUGIN_NAME }}-${{ github.ref_name }}.zip ${{ env.PLUGIN_NAME }}
             - name: Attest build provenance
+              # Non-blocking: this fork's environment fails this step (likely an
+              # OIDC/attestation restriction specific to forks), and the signed
+              # provenance isn't required for the plugin to work or for BRAT/manual
+              # installs - don't let it block the actual release.
+              continue-on-error: true
               uses: actions/attest@v4
               with:
                   subject-path: |
@@ -39,12 +44,13 @@ jobs:
                       ${{ env.PLUGIN_NAME }}-${{ github.ref_name }}.zip
             - name: Create Release
               id: create_release
+              if: always()
               uses: softprops/action-gh-release@v2
               with:
                   tag_name: ${{ github.ref }}
                   name: ${{ github.ref_name }}
                   generate_release_notes: false
-                  body: See the [changelog](https://github.com/Vinzent03/obsidian-git/blob/master/CHANGELOG.md) for details.
+                  body: See the [changelog](https://github.com/WertC-14/obsidian-git/blob/master/CHANGELOG.md) for details.
                   draft: false
                   prerelease: false
                   files: |

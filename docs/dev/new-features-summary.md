@@ -23,12 +23,12 @@ değiştirmene gerek kalmaz):
 | `images/switch-branch.png` | Branch pill'e tıklayınca çıkan "Select branch to checkout" ekranı | ✅ eklendi |
 | `images/diff-view-demo.png` | Bir dosyanın diff/karşılaştırma ekranı | ✅ eklendi |
 | `images/stash-tags-menu.png` | "..." menüsünde Stash ve Tags gruplarının açık hali | ⏳ bekliyor |
-| `images/brat-1-install.png` | Obsidian Community Plugins aramasında BRAT eklentisinin bulunup "Install" butonuna basılacağı an | ⏳ bekliyor |
+| `images/brat-1-install.png` | Obsidian Community Plugins aramasında BRAT eklentisinin bulunup "Install" butonuna basılacağı an | ✅ eklendi |
 | `images/brat-2-add-beta-plugin.png` | BRAT'ın kendi ayarlar sayfası, "Add Beta Plugin" butonu görünecek şekilde | ⏳ bekliyor |
-| `images/brat-3-enter-repo.png` | "Add Beta Plugin" tıklanınca açılan diyalog kutusu — `WertC-14/obsidian-git` yazılmış/yazılacak alan görünecek şekilde | ⏳ bekliyor |
+| `images/brat-3-enter-repo.png` | "Add Beta Plugin" tıklanınca açılan diyalog kutusu — `WertC-14/obsidian-git` yazılmış/yazılacak alan görünecek şekilde | ✅ eklendi |
 | `images/brat-4-enable-plugin.png` | BRAT kurulumu bitince Settings → Community plugins listesinde "Git" eklentisinin göründüğü ve aç/kapa (toggle) düğmesinin bulunduğu an | ⏳ bekliyor |
 
-Kalan 5 tanesi için de aynı şekilde ekran görüntüsü paylaşman yeterli,
+Kalan 3 tanesi için de aynı şekilde ekran görüntüsü paylaşman yeterli,
 ben `images/` klasörüne kaydedip README'ye bağlarım.
 
 README artık orijinal projenin History View / Signs ekran görüntülerini

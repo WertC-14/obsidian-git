@@ -2,11 +2,43 @@
 
 A powerful community plugin for [Obsidian.md](https://obsidian.md) that brings Git integration right into your vault. Automatically commit, pull, push, and see your changes — all within Obsidian.
 
+> This is a fork of [Vinzent03/obsidian-git](https://github.com/Vinzent03/obsidian-git) with a reworked Source Control panel: a simplified toolbar, an embedded commit graph, and Stash/Tag support. Since it's a fork, it's **not listed in Obsidian's Community Plugins browser** — see [Installing this fork](#-installing-this-fork) below for how to get it.
+
 ## 📚 Documentation
 
 All setup instructions (including mobile), common issues, tips, and advanced configuration can be found in the 📖 [full documentation](https://publish.obsidian.md/git-doc).
 
 > Mobile users: The plugin is **highly unstable ⚠️ !** Please check the dedicated [Mobile](#-mobile-support-%EF%B8%8F--experimental) section below.
+
+## 📦 Installing This Fork
+
+Because this is a fork, Obsidian's built-in Community Plugins search won't find it. Use one of these instead:
+
+### Option A: BRAT (recommended, gets updates automatically)
+
+1. Install the [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) plugin from Community Plugins.
+
+   ![Installing BRAT from Community Plugins](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-1-install.png)
+
+2. Open BRAT's settings → **Add Beta Plugin**.
+
+   ![BRAT settings, Add Beta Plugin button](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-2-add-beta-plugin.png)
+
+3. Enter this repository: `WertC-14/obsidian-git`.
+
+   ![Entering the repo in BRAT's Add Beta Plugin dialog](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-3-enter-repo.png)
+
+4. Enable "Git" in **Settings → Community plugins** once BRAT installs it.
+
+   ![Enabling Git in Community plugins after BRAT install](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-4-enable-plugin.png)
+
+### Option B: Manual install
+
+1. Go to this repo's [Releases page](https://github.com/WertC-14/obsidian-git/releases) and download `main.js`, `manifest.json`, and `styles.css` from the latest release.
+2. Create a folder `<your-vault>/.obsidian/plugins/obsidian-git/` and put those three files in it.
+3. Reload Obsidian (or disable/re-enable the plugin) and enable "Git" in **Settings → Community plugins**.
+
+> If you already have the original `obsidian-git` installed, disable/uninstall it first — both use the same plugin ID and will conflict.
 
 ## Key Features
 
@@ -14,6 +46,9 @@ All setup instructions (including mobile), common issues, tips, and advanced con
 - 📥 **Auto-pull on Obsidian startup**
 - 📂 **Submodule support** for managing multiple repositories (desktop only and opt-in)
 - 🔧 **Source Control View** to stage/unstage, commit and diff files - Open it with the `Open source control view` command.
+- 🌿 **Commit Graph** showing branches as colored parallel lanes, merges, and tags - embedded in the Source Control view and available as a standalone History view.
+- 📦 **Stash support** - stash, apply, pop, and drop changes without leaving Obsidian.
+- 🏷️ **Tag support** - create and delete lightweight/annotated tags.
 - 📜 **History View** for browsing commit logs and changed files - Open it with the `Open history view` command.
 - 🔍 **Diff View** for viewing changes in a file - Open it with the `Open diff view` command.
 - 📝 **Signs in the editor** to indicate added, modified, and deleted lines/hunks (desktop only).
@@ -25,28 +60,40 @@ All setup instructions (including mobile), common issues, tips, and advanced con
 
 ### 🔧 Source Control View
 
-Manage your file changes directly inside Obsidian like stage/unstage individual files and commit them.
+Manage your file changes directly inside Obsidian like stage/unstage individual files and commit them. The toolbar is a branch pill plus a "..." menu grouping every other action (Branch, Stash, Tags, Remote, etc.).
 
-![Source Control View](https://raw.githubusercontent.com/Vinzent03/obsidian-git/master/images/source-view.png)
+![Source Control View](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/source-view.png)
+
+### 🌿 Commit Graph
+
+Branches render as colored parallel lanes with merges, tag badges, and the current HEAD marked as a ring. Available embedded in the Source Control view (below Changes) and as a standalone History view.
+
+![Commit Graph](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/commit-graph.png)
+
+### 📦 Stash & 🏷️ Tags
+
+Stash and unstash changes, and create/delete tags, from the "..." menu or the Command Palette - no need to drop into a terminal.
+
+![Stash and Tags menu](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/stash-tags-menu.png)
 
 ### 📜 History View
 
 Show the commit history of your repository. The commit message, author, date, and changed files can be shown. Author and date are disabled by default as shown in the screenshot, but can be enabled in the settings.
 
-![History View](https://raw.githubusercontent.com/Vinzent03/obsidian-git/master/images/history-view.png)
+![History View](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/history-view.png)
 
 ### 🔍 Diff View 
 
 Compare versions with a clear and concise diff viewer.
 Open it from the source control view or via the `Open diff view` command.
 
-![Diff View](https://raw.githubusercontent.com/Vinzent03/obsidian-git/master/images/diff-view.png)
+![Diff View](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/diff-view.png)
 
 ### 📝 Signs in the Editor
 
 View line-by-line changes directly in the editor with added, modified, and deleted line/hunk indicators. You can stage and reset changes right from the signs. There also commands to navigate between hunks and stage/reset hunks under the cursor. Needs to be enabled in the plugin settings.
 
-![Signs](https://raw.githubusercontent.com/Vinzent03/obsidian-git/master/images/signs.png)
+![Signs](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/signs.png)
 
 ## Available Commands
 > Not exhaustive - these are just some of the most common commands. For a full list, see the Command Palette in Obsidian.
@@ -77,7 +124,17 @@ View line-by-line changes directly in the editor with added, modified, and delet
   - `Initialize a new repo`
   - `Create new branch`
   - `Delete branch`
+  - `Switch branch`, `Switch to remote branch`
+  - `Fetch`
   - `CAUTION: Delete repository`
+- 📦 Stash
+  - `Stash changes`
+  - `Apply stash`
+  - `Pop stash`
+  - `Drop stash`
+- 🏷️ Tags
+  - `Create tag`
+  - `Delete tag`
 - 🧪 Miscellaneous
   - `Open source control view`: Opens side pane displaying [Source control view](#sidebar-view)
   - `Open history view`: Opens side pane displaying [History view](#history-view)
@@ -129,7 +186,8 @@ If you have a large repo/vault I recommend to stage individual files and only co
 ## 🙋 Contact & Credits
 
 - The Line Authoring feature was developed by [GollyTicker](https://github.com/GollyTicker), so any questions may be best answered by her.
-- This plugin was initial developed by [denolehov](https://github.com/denolehov). Since March 2021, it's me [Vinzent03](https://github.com/Vinzent03) who is developing this plugin. That's why the GitHub repository got moved to my account in July 2024.
+- This plugin was initial developed by [denolehov](https://github.com/denolehov). Since March 2021, it's [Vinzent03](https://github.com/Vinzent03) who is developing the upstream plugin. That's why the GitHub repository got moved to their account in July 2024.
+- This fork's Source Control panel rework (commit graph, Stash/Tags, reorganized toolbar/menu) is maintained by [WertC-14](https://github.com/WertC-14).
 - If you have any kind of feedback or questions, feel free to reach out via GitHub issues.
 
 ## ☕ Support

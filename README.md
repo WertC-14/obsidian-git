@@ -1,197 +1,71 @@
-# Obsidian Git Plugin
+# Obsidian Git — WertC-14 Fork
 
-A powerful community plugin for [Obsidian.md](https://obsidian.md) that brings Git integration right into your vault. Automatically commit, pull, push, and see your changes — all within Obsidian.
+[Vinzent03/obsidian-git](https://github.com/Vinzent03/obsidian-git) eklentisinin, Source Control panelini GitLens/GitKraken tarzına yaklaştıran bir fork'u: renkli commit graph'ı, Stash/Tag desteği ve sadeleştirilmiş bir toolbar/menü ekler. Vault'undaki değişiklikleri commit/pull/push etmek için gereken temel Git entegrasyonu aynen duruyor, üstüne bu fork'a özgü şu yenilikler var:
 
-> This is a fork of [Vinzent03/obsidian-git](https://github.com/Vinzent03/obsidian-git) with a reworked Source Control panel: a simplified toolbar, an embedded commit graph, and Stash/Tag support. Since it's a fork, it's **not listed in Obsidian's Community Plugins browser** — see [Installing this fork](#-installing-this-fork) below for how to get it.
+- 🌿 **Commit Graph** — branch'ler renkli paralel şeritlerle, merge noktaları doğru birleşerek, tag/branch rozetleriyle gösteriliyor. Hem Source Control panelinin içine gömülü hem ayrı bir History view olarak.
+- 📦 **Stash** — değişiklikleri sakla/uygula/geri al/sil, terminale hiç inmeden.
+- 🏷️ **Tags** — tag oluştur/sil.
+- 🔧 **Sadeleştirilmiş toolbar** — branch adı gösteren bir pill + gruplu bir "..." menüsü (Sync, Branch, Stash, Tags, Remote).
+- ⚡ **"Sync Changes" butonu** — commit edilecek bir şey kalmayıp push edilmemiş commit'ler varsa, ana buton otomatik olarak push'u öneriyor (VS Code/GitLens'teki gibi).
 
-## 📚 Documentation
+> Bu bir fork olduğu için **Obsidian'ın Community Plugins aramasında görünmüyor** — kurulum için aşağıya bak.
 
-All setup instructions (including mobile), common issues, tips, and advanced configuration can be found in the 📖 [full documentation](https://publish.obsidian.md/git-doc).
+## 📦 Kurulum
 
-> Mobile users: The plugin is **highly unstable ⚠️ !** Please check the dedicated [Mobile](#-mobile-support-%EF%B8%8F--experimental) section below.
+### BRAT ile (önerilen, güncellemeleri otomatik alır)
 
-## 📦 Installing This Fork
+1. Community Plugins'ten [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) eklentisini kur.
 
-Because this is a fork, Obsidian's built-in Community Plugins search won't find it. Use one of these instead:
+   ![BRAT'ı Community Plugins'ten kurma](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-1-install.png)
 
-### Option A: BRAT (recommended, gets updates automatically)
+2. BRAT'ın ayarlarını aç → **Add Beta Plugin**.
 
-1. Install the [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) plugin from Community Plugins.
+   ![BRAT ayarlarında Add Beta Plugin butonu](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-2-add-beta-plugin.png)
 
-   ![Installing BRAT from Community Plugins](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-1-install.png)
+3. Bu repoyu gir: `WertC-14/obsidian-git`.
 
-2. Open BRAT's settings → **Add Beta Plugin**.
+   ![BRAT diyalog kutusuna repo adının girilmesi](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-3-enter-repo.png)
 
-   ![BRAT settings, Add Beta Plugin button](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-2-add-beta-plugin.png)
+4. Kurulum bitince **Settings → Community plugins**'ten "Git"i aç.
 
-3. Enter this repository: `WertC-14/obsidian-git`.
+   ![Community plugins listesinde Git'i aktif etme](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-4-enable-plugin.png)
 
-   ![Entering the repo in BRAT's Add Beta Plugin dialog](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-3-enter-repo.png)
+### Manuel kurulum
 
-4. Enable "Git" in **Settings → Community plugins** once BRAT installs it.
+1. Bu reponun [Releases sayfasından](https://github.com/WertC-14/obsidian-git/releases) en son sürümün `main.js`, `manifest.json` ve `styles.css` dosyalarını indir.
+2. `<vault-klasörün>/.obsidian/plugins/obsidian-git/` klasörünü oluşturup bu üç dosyayı içine koy.
+3. Obsidian'ı yeniden başlat (veya eklentiyi kapat/aç) ve **Settings → Community plugins**'ten "Git"i etkinleştir.
 
-   ![Enabling Git in Community plugins after BRAT install](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/brat-4-enable-plugin.png)
+> Orijinal `obsidian-git` eklentisi zaten kuruluysa önce onu kapat/kaldır — ikisi aynı eklenti ID'sini kullanıyor, çakışırlar.
 
-### Option B: Manual install
+## Ekran Görüntüleri
 
-1. Go to this repo's [Releases page](https://github.com/WertC-14/obsidian-git/releases) and download `main.js`, `manifest.json`, and `styles.css` from the latest release.
-2. Create a folder `<your-vault>/.obsidian/plugins/obsidian-git/` and put those three files in it.
-3. Reload Obsidian (or disable/re-enable the plugin) and enable "Git" in **Settings → Community plugins**.
+### Source Control Paneli
 
-> If you already have the original `obsidian-git` installed, disable/uninstall it first — both use the same plugin ID and will conflict.
+Branch pill + "..." menüsüyle sadeleşmiş toolbar, Staged/Changes listeleri ve altında gömülü Graph bölümü.
 
-## Key Features
+![Source Control Paneli](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/source-view.png)
 
-- 🔁 **Automatic commit-and-sync** (commit, pull, and push) on a schedule.
-- 📥 **Auto-pull on Obsidian startup**
-- 📂 **Submodule support** for managing multiple repositories (desktop only and opt-in)
-- 🔧 **Source Control View** to stage/unstage, commit and diff files - Open it with the `Open source control view` command.
-- 🌿 **Commit Graph** showing branches as colored parallel lanes, merges, and tags - embedded in the Source Control view and available as a standalone History view.
-- 📦 **Stash support** - stash, apply, pop, and drop changes without leaving Obsidian.
-- 🏷️ **Tag support** - create and delete lightweight/annotated tags.
-- 📜 **History View** for browsing commit logs and changed files - Open it with the `Open history view` command.
-- 🔍 **Diff View** for viewing changes in a file - Open it with the `Open diff view` command.
-- 📝 **Signs in the editor** to indicate added, modified, and deleted lines/hunks (desktop only).
-- GitHub integration to open files and history in your browser
+### Commit Graph
 
-> For detailed file history, consider pairing this plugin with the [Version History Diff](obsidian://show-plugin?id=obsidian-version-history-diff) plugin.
-
-## UI Previews
-
-### 🔧 Source Control View
-
-Manage your file changes directly inside Obsidian like stage/unstage individual files and commit them. The toolbar is a branch pill plus a "..." menu grouping every other action (Branch, Stash, Tags, Remote, etc.).
-
-![Source Control View](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/source-view.png)
-
-### 🌿 Commit Graph
-
-Branches render as colored parallel lanes with merges, tag badges, and the current HEAD marked as a ring. Available embedded in the Source Control view (below Changes) and as a standalone History view.
+Birden fazla branch, renkli paralel şeritler, merge noktaları ve tag rozetleriyle.
 
 ![Commit Graph](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/commit-graph.png)
 
-### 📦 Stash & 🏷️ Tags
+### Stash & Tags Menüsü
 
-Stash and unstash changes, and create/delete tags, from the "..." menu or the Command Palette - no need to drop into a terminal.
+"..." menüsünden stash ve tag işlemleri.
 
-![Stash and Tags menu](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/stash-tags-menu.png)
+![Stash ve Tags menüsü](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/stash-tags-menu.png)
 
-### 📜 History View
+## Diğer Her Şey İçin
 
-Show the commit history of your repository. The commit message, author, date, and changed files can be shown. Author and date are disabled by default as shown in the screenshot, but can be enabled in the settings.
+Commit/pull/push, otomatik yedekleme, satır bazlı imzalar (signs), diff view, submodule desteği gibi bu fork'ta değişmeyen tüm özellikler ve ayarlar için orijinal projenin 📖 [tam dokümantasyonuna](https://publish.obsidian.md/git-doc) bakabilirsin — bu fork sadece Source Control panelinin görünümünü/işlevini genişletiyor, alttaki git entegrasyonu aynı.
 
-![History View](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/history-view.png)
+> ⚠️ **Mobil kullanıcılar:** Mobildeki git motoru (isomorphic-git) hâlâ **kararsız** — büyük repolarda çökme/donma yaşanabilir. Detaylar için [orijinal projenin mobil bölümüne](https://github.com/Vinzent03/obsidian-git#-mobile-support-%EF%B8%8F--experimental) bak.
 
-### 🔍 Diff View 
+## Teşekkür
 
-Compare versions with a clear and concise diff viewer.
-Open it from the source control view or via the `Open diff view` command.
-
-![Diff View](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/diff-view.png)
-
-### 📝 Signs in the Editor
-
-View line-by-line changes directly in the editor with added, modified, and deleted line/hunk indicators. You can stage and reset changes right from the signs. There also commands to navigate between hunks and stage/reset hunks under the cursor. Needs to be enabled in the plugin settings.
-
-![Signs](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/signs.png)
-
-## Available Commands
-> Not exhaustive - these are just some of the most common commands. For a full list, see the Command Palette in Obsidian.
-
-- 🔄 Changes
-  - `List changed files`: Lists all changes in a modal
-  - `Open diff view`: Open diff view for the current file
-  - `Stage current file`
-  - `Unstage current file`
-  - `Discard all changes`: Discard all changes in the repository
-- ✅ Commit
-  - `Commit`: If files are staged only commits those, otherwise commits only files that have been staged
-  - `Commit with specific message`: Same as above, but with a custom message
-  - `Commit all changes`: Commits all changes without pushing
-  - `Commit all changes with specific message`: Same as above, but with a custom message
-- 🔀 Commit-and-sync
-  - `Commit-and-sync`: With default settings, this will commit all changes, pull, and push
-  - `Commit-and-sync with specific message`: Same as above, but with a custom message
-  - `Commit-and-sync and close`: Same as `Commit-and-sync`, but if running on desktop, will close the Obsidian window. Will not exit Obsidian app on mobile.
-- 🌐 Remote
-  - `Push`, `Pull`
-  - `Edit remotes`: Add new remotes or edit existing remotes
-  - `Remove remote`
-  - `Clone an existing remote repo`: Opens dialog that will prompt for URL and authentication to clone a remote repo
-  - `Open file on GitHub`: Open the file view of the current file on GitHub in a browser window. Note: only works on desktop
-  - `Open file history on GitHub`: Open the file history of the current file on GitHub in a browser window. Note: only works on desktop
-- 🏠 Manage local repository
-  - `Initialize a new repo`
-  - `Create new branch`
-  - `Delete branch`
-  - `Switch branch`, `Switch to remote branch`
-  - `Fetch`
-  - `CAUTION: Delete repository`
-- 📦 Stash
-  - `Stash changes`
-  - `Apply stash`
-  - `Pop stash`
-  - `Drop stash`
-- 🏷️ Tags
-  - `Create tag`
-  - `Delete tag`
-- 🧪 Miscellaneous
-  - `Open source control view`: Opens side pane displaying [Source control view](#sidebar-view)
-  - `Open history view`: Opens side pane displaying [History view](#history-view)
-  - `Edit .gitignore`
-  - `Add file to .gitignore`: Add current file to `.gitignore`
-
-## 💻 Desktop Notes
-
-### 🔐 Authentication
-
-Some Git services may require further setup for HTTPS/SSH authentication. Refer to the [Authentication Guide](https://publish.obsidian.md/git-doc/Authentication)
-
-### Obsidian on Linux
-
-- ⚠️  Snap is not supported due to its sandboxing restrictions.
-- ⚠️  Flatpak is not recommended, because it doesn't have access to all system files. They are actively fixing many issues, but there are still issues. Especially with more advanced setups.
-- ✅ Please use AppImage or a full access installation of your system's package manager instead ([Linux installation guide](https://publish.obsidian.md/git-doc/Installation#Linux))
-
-## 📱 Mobile Support (⚠️  Experimental)
-
-The Git implementation on mobile is **very unstable**! I would not recommend using this plugin on mobile, but try other syncing services.
-
-One such alternative is [GitSync](https://github.com/ViscousPot/GitSync), which is available on both Android and iOS. It is not associated with this plugin, but it may be a better option for mobile users. A tutorial for setting it up can be found [here](https://viscouspotenti.al/posts/gitsync-all-devices-tutorial).
-
-> 🧪 The Git plugin works on mobile thanks to [isomorphic-git](https://isomorphic-git.org/), a JavaScript-based re-implementation of Git - but it comes with serious limitations and issues. It is not possible for an Obsidian plugin to use a native Git installation on Android or iOS.
-
-### ❌ Mobile Feature Limitations
-
-- No **SSH authentication** ([isomorphic-git issue](https://github.com/isomorphic-git/isomorphic-git/issues/231))
-- Limited repo size, because of memory restrictions
-- No rebase merge strategy
-- No submodules support
-
-### ⚠️ Performance Caveats
-
-> [!caution]
-> Depending on your device and available free RAM, Obsidian may
->
-> - crash on clone/pull
-> - create buffer overflow errors
-> - run indefinitely.
->
-> It's caused by the underlying git implementation on mobile, which is not efficient. I don't know how to fix this. If that's the case for you, I have to admit this plugin won't work for you. So commenting on any issue or creating a new one won't help. I am sorry.
-
-### Tips for Mobile Use:
-
-If you have a large repo/vault I recommend to stage individual files and only commit staged files.
-
-## 🙋 Contact & Credits
-
-- The Line Authoring feature was developed by [GollyTicker](https://github.com/GollyTicker), so any questions may be best answered by her.
-- This plugin was initial developed by [denolehov](https://github.com/denolehov). Since March 2021, it's [Vinzent03](https://github.com/Vinzent03) who is developing the upstream plugin. That's why the GitHub repository got moved to their account in July 2024.
-- This fork's Source Control panel rework (commit graph, Stash/Tags, reorganized toolbar/menu) is maintained by [WertC-14](https://github.com/WertC-14).
-- If you have any kind of feedback or questions, feel free to reach out via GitHub issues.
-
-## ☕ Support
-
-If you find this plugin useful and would like to support its development, you can support me on Ko-fi.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/F1F195IQ5)
+- Orijinal proje ve alttaki git entegrasyonu [Vinzent03](https://github.com/Vinzent03) tarafından geliştiriliyor (ilk yazan [denolehov](https://github.com/denolehov)).
+- Bu fork'taki Source Control paneli reworku (commit graph, Stash/Tags, yeni toolbar/menü) [WertC-14](https://github.com/WertC-14) tarafından yapıldı.
+- Geri bildirim/soru için GitHub issues kullanabilirsin.

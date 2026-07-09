@@ -25,13 +25,14 @@ değiştirmene gerek kalmaz):
 | `images/brat-2-add-beta-plugin.png` | BRAT'ın kendi ayarlar sayfası, "Add Beta Plugin" butonu görünecek şekilde |
 | `images/brat-3-enter-repo.png` | "Add Beta Plugin" tıklanınca açılan diyalog kutusu — `WertC-14/obsidian-git` yazılmış/yazılacak alan görünecek şekilde |
 | `images/brat-4-enable-plugin.png` | BRAT kurulumu bitince Settings → Community plugins listesinde "Git" eklentisinin göründüğü ve aç/kapa (toggle) düğmesinin bulunduğu an |
-| `images/history-view.png` | Değişmedi, mevcut dosya kalabilir |
-| `images/diff-view.png` | Değişmedi, mevcut dosya kalabilir |
-| `images/signs.png` | Değişmedi, mevcut dosya kalabilir |
 
-`history-view`/`diff-view`/`signs` dışındaki tüm dosyalar ya yeni ya da
-güncellenmesi gerekiyor — toplam 7 tane fotoğraf/ekran görüntüsü lazım
-(3 özellik görseli + 4 BRAT adım görseli).
+README artık orijinal projenin History View / Diff View / Signs
+ekran görüntülerini içermiyor (`images/history-view.png`,
+`images/diff-view.png`, `images/signs.png` hâlâ repoda duruyorlar ama
+README bunlara referans vermiyor) — README artık sadece bu fork'a özgü
+şeyleri gösteriyor, değişmeyen özellikler için orijinal dokümantasyona
+link veriyor. Toplam 7 tane fotoğraf/ekran görüntüsü lazım (3 özellik
+görseli + 4 BRAT adım görseli).
 
 ---
 

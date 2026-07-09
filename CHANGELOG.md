@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.39.0](https://github.com/WertC-14/obsidian-git/compare/2.38.6...2.39.0) (2026-07-09)
+
+
+### Features
+
+* add commit graph, Stash/Tags support, and rework Source Control panel ([ea48fbc](https://github.com/WertC-14/obsidian-git/commit/ea48fbc49181b61e7ae373f20cd2b8f4cceb870b))
+* simplify source control toolbar into branch pill + more-actions menu ([866e932](https://github.com/WertC-14/obsidian-git/commit/866e9324a6c14fcd891bff34046f624fb8785fc2))
+
+
+### Bug Fixes
+
+* add guards and notifications for no current branch ([e5869a3](https://github.com/WertC-14/obsidian-git/commit/e5869a3bce0ac1f33450f3bf8584904c9ea1f38e))
+* avoid misleading "Committed 0 files" notice ([#1103](https://github.com/WertC-14/obsidian-git/issues/1103)) ([be21cdf](https://github.com/WertC-14/obsidian-git/commit/be21cdfed623beb63d658a99a5659d669dee0d2e))
+
 ### [2.38.6](https://github.com/Vinzent03/obsidian-git/compare/2.38.5...2.38.6) (2026-07-05)
 
 ### [2.38.5](https://github.com/Vinzent03/obsidian-git/compare/2.38.4...2.38.5) (2026-06-14)

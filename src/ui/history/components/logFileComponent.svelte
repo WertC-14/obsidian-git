@@ -8,11 +8,11 @@
         getNewLeaf,
         mayTriggerFileMenu,
     } from "src/utils";
-    import type HistoryView from "../historyView";
+    import type { LogHostView } from "../logHostView";
 
     interface Props {
         diff: DiffFile;
-        view: HistoryView;
+        view: LogHostView;
     }
 
     let { diff, view }: Props = $props();

@@ -23,11 +23,19 @@ import type {
     DiffFile,
     FileStatusResult,
     LogEntry,
+    StashEntry,
     Status,
 } from "../types";
 import { CurrentGitAction, NoNetworkError } from "../types";
-import { impossibleBranch, spawnAsync, splitRemoteBranch } from "../utils";
+import {
+    impossibleBranch,
+    parseRefDecoration,
+    spawnAsync,
+    splitRemoteBranch,
+} from "../utils";
 import { GitManager } from "./gitManager";
+
+type LogFieldsWithParents = simple.DefaultLogFields & { parents: string };
 
 export class SimpleGit extends GitManager {
     git: simple.SimpleGit;
@@ -641,6 +649,69 @@ export class SimpleGit extends GitManager {
         return this.discard(dir ?? ".");
     }
 
+    async stashPush({
+        message,
+        includeUntracked,
+    }: {
+        message?: string;
+        includeUntracked?: boolean;
+    }): Promise<void> {
+        const args = ["push"];
+        if (includeUntracked) args.push("-u");
+        if (message) args.push("-m", message);
+        await this.git.stash(args);
+    }
+
+    async stashPop(index = 0): Promise<void> {
+        await this.git.stash(["pop", `stash@{${index}}`]);
+    }
+
+    async stashApply(index = 0): Promise<void> {
+        await this.git.stash(["apply", `stash@{${index}}`]);
+    }
+
+    async stashDrop(index = 0): Promise<void> {
+        await this.git.stash(["drop", `stash@{${index}}`]);
+    }
+
+    async listStashes(): Promise<StashEntry[]> {
+        const res = await this.git.stashList();
+        return res.all.map((entry, index) => {
+            // Native git uses "WIP on <branch>:" for the default (no -m) message
+            // and "On <branch>:" when a custom message was given via -m.
+            const match = /^(?:WIP on|On) ([^:]+):/.exec(entry.message);
+            return {
+                index,
+                message: entry.message,
+                branch: match?.[1],
+                date: entry.date,
+            };
+        });
+    }
+
+    async createTag({
+        name,
+        message,
+    }: {
+        name: string;
+        message?: string;
+    }): Promise<void> {
+        if (message) {
+            await this.git.addAnnotatedTag(name, message);
+        } else {
+            await this.git.addTag(name);
+        }
+    }
+
+    async deleteTag(name: string): Promise<void> {
+        await this.git.tag(["-d", name]);
+    }
+
+    async listTags(): Promise<string[]> {
+        const res = await this.git.tags();
+        return res.all;
+    }
+
     async pull(): Promise<FileStatusResult[] | undefined> {
         this.plugin.setPluginState({ gitAction: CurrentGitAction.pull });
         try {
@@ -875,37 +946,29 @@ export class SimpleGit extends GitManager {
         }
     }
 
-    // https://github.com/kometenstaub/obsidian-version-history-diff/issues/3
-    async log(
-        file: string | undefined,
-        relativeToVault = true,
-        limit?: number,
-        ref?: string
-    ): Promise<(LogEntry & { fileName?: string })[]> {
-        let path: string | undefined;
-        if (file) {
-            path = this.getRelativeRepoPath(file, relativeToVault);
-        }
-        const opts: Record<string, unknown> = {
-            file: path,
-            maxCount: limit,
-            // Ensures that the changed files are listed for merge commits as well and the commit is not repeated for each parent.
-            // This only lists the changed files for the first parent.
-            "--diff-merges": "first-parent",
-            "--name-status": null,
-        };
-        if (ref) {
-            opts[ref] = null;
-        }
-        const res = await this.git.log(opts);
+    private static readonly LOG_FORMAT = {
+        hash: "%H",
+        date: "%aI",
+        message: "%s",
+        refs: "%D",
+        body: "%b",
+        author_name: "%aN",
+        author_email: "%aE",
+        parents: "%P",
+    };
 
-        return res.all.map<LogEntry>((e) => ({
+    private toLogEntry(
+        e: LogFieldsWithParents & { diff?: simple.DiffResult },
+        remotes: string[]
+    ): LogEntry & { fileName?: string } {
+        return {
             ...e,
             author: {
                 name: e.author_name,
                 email: e.author_email,
             },
-            refs: e.refs.split(", ").filter((e) => e.length > 0),
+            refs: parseRefDecoration(e.refs, remotes),
+            parents: e.parents.split(" ").filter((p) => p.length > 0),
             diff: {
                 ...e.diff!,
                 files:
@@ -926,7 +989,65 @@ export class SimpleGit extends GitManager {
                     ) ?? [],
             },
             fileName: e.diff?.files.first()?.file,
-        }));
+        };
+    }
+
+    // https://github.com/kometenstaub/obsidian-version-history-diff/issues/3
+    async log(
+        file: string | undefined,
+        relativeToVault = true,
+        limit?: number,
+        ref?: string
+    ): Promise<(LogEntry & { fileName?: string })[]> {
+        let path: string | undefined;
+        if (file) {
+            path = this.getRelativeRepoPath(file, relativeToVault);
+        }
+        const remotes = await this.getRemotes();
+        const opts: Record<string, unknown> = {
+            file: path,
+            maxCount: limit,
+            format: SimpleGit.LOG_FORMAT,
+            // Ensures that the changed files are listed for merge commits as well and the commit is not repeated for each parent.
+            // This only lists the changed files for the first parent.
+            "--diff-merges": "first-parent",
+            "--name-status": null,
+        };
+        if (ref) {
+            opts[ref] = null;
+        }
+        const res = await this.git.log<LogFieldsWithParents>(opts);
+
+        return res.all.map((e) => this.toLogEntry(e, remotes));
+    }
+
+    /**
+     * Combined, deduplicated commit history across all local branches, for
+     * rendering the commit graph. Unlike {@link log}, this never includes
+     * remote-tracking branches (no `--all`), only local ones.
+     */
+    async logGraph(
+        limit: number,
+        offset: number
+    ): Promise<(LogEntry & { fileName?: string })[]> {
+        const [remotes, branchInfo] = await Promise.all([
+            this.getRemotes(),
+            this.branchInfo(),
+        ]);
+        const opts: Record<string, unknown> = {
+            maxCount: limit,
+            format: SimpleGit.LOG_FORMAT,
+            "--diff-merges": "first-parent",
+            "--name-status": null,
+            "--topo-order": null,
+            "--skip": offset,
+        };
+        for (const branch of branchInfo.branches) {
+            opts[branch] = null;
+        }
+        const res = await this.git.log<LogFieldsWithParents>(opts);
+
+        return res.all.map((e) => this.toLogEntry(e, remotes));
     }
 
     async show(

@@ -6,6 +6,7 @@ import type {
     GitHttpResponse,
     GitProgressEvent,
     HttpClient,
+    ReadCommitResult,
     Walker,
     WalkerMap,
 } from "isomorphic-git";
@@ -16,6 +17,8 @@ import type {
     BranchInfo,
     FileStatusResult,
     LogEntry,
+    RefInfo,
+    StashEntry,
     Status,
     UnstagedFile,
     WalkDifference,
@@ -240,6 +243,11 @@ export class IsomorphicGit extends GitManager {
                 })
             );
             this.plugin.localStorage.setConflict(false);
+            // Matches SimpleGit's commit()/commitAll(), which trigger this so the
+            // commit graph (bound to this event) picks up the new commit - without
+            // it, IsomorphicGit (mobile) commits never appeared in the graph until
+            // some unrelated action happened to trigger a refresh.
+            this.app.workspace.trigger("obsidian-git:head-change");
             return;
         } catch (error) {
             this.plugin.displayError(error);
@@ -413,6 +421,92 @@ export class IsomorphicGit extends GitManager {
             this.plugin.displayError(error);
             throw error;
         }
+    }
+
+    // These stash/tag methods deliberately don't self-display errors (unlike most other
+    // methods in this file) - they mirror SimpleGit's convention of letting the single
+    // caller-side catch (sourceControl.svelte's menu handlers / commands.ts) show the
+    // Notice, since `listTags()` below is also called from `buildRefMap()` on every
+    // background graph refresh and from the public `log()`/`logGraph()` API other
+    // community plugins call directly - self-displaying here would pop a Notice on
+    // every silent background failure and on failures callers outside this plugin
+    // never asked to have surfaced. `wrapFS()` already guarantees fs cleanup on both
+    // success and failure paths, so no try/catch is needed here for that either.
+
+    async stashPush({
+        message,
+    }: {
+        message?: string;
+        // isomorphic-git's stash push has no untracked-file option at all - the flag is
+        // accepted for interface parity but ignored here. `main.ts` only offers the
+        // "include untracked" toggle when talking to SimpleGit, so this is never silently
+        // dropping a choice the user actually made on this backend.
+        includeUntracked?: boolean;
+    }): Promise<void> {
+        await this.checkAuthorInfo();
+        await this.wrapFS(
+            git.stash({ ...this.getRepo(), op: "push", message })
+        );
+    }
+
+    async stashPop(index = 0): Promise<void> {
+        await this.wrapFS(
+            git.stash({ ...this.getRepo(), op: "pop", refIdx: index })
+        );
+    }
+
+    async stashApply(index = 0): Promise<void> {
+        await this.wrapFS(
+            git.stash({ ...this.getRepo(), op: "apply", refIdx: index })
+        );
+    }
+
+    async stashDrop(index = 0): Promise<void> {
+        await this.wrapFS(
+            git.stash({ ...this.getRepo(), op: "drop", refIdx: index })
+        );
+    }
+
+    async listStashes(): Promise<StashEntry[]> {
+        const lines = (await this.wrapFS(
+            git.stash({ ...this.getRepo(), op: "list" })
+        )) as unknown as string[];
+        return (lines ?? []).map((line, index) => {
+            const messageMatch = /^stash@\{\d+\}:\s*(.*)$/.exec(line);
+            const message = messageMatch?.[1] ?? line;
+            const branchMatch = /^WIP on ([^:]+):/.exec(message);
+            return { index, message, branch: branchMatch?.[1] };
+        });
+    }
+
+    async listTags(): Promise<string[]> {
+        return await this.wrapFS(git.listTags(this.getRepo()));
+    }
+
+    async createTag({
+        name,
+        message,
+    }: {
+        name: string;
+        message?: string;
+    }): Promise<void> {
+        const { name: tagName, email: tagEmail } = await this.checkAuthorInfo();
+        if (message) {
+            await this.wrapFS(
+                git.annotatedTag({
+                    ...this.getRepo(),
+                    ref: name,
+                    message,
+                    tagger: { name: tagName, email: tagEmail },
+                })
+            );
+        } else {
+            await this.wrapFS(git.tag({ ...this.getRepo(), ref: name }));
+        }
+    }
+
+    async deleteTag(name: string): Promise<void> {
+        await this.wrapFS(git.deleteTag({ ...this.getRepo(), ref: name }));
     }
 
     async getUntrackedPaths(opts: {
@@ -862,6 +956,7 @@ export class IsomorphicGit extends GitManager {
         limit?: number,
         ref?: string
     ): Promise<LogEntry[]> {
+        const refMap = await this.buildRefMap();
         const logs = await this.wrapFS(
             git.log({ ...this.getRepo(), depth: limit, ref: ref })
         );
@@ -869,6 +964,10 @@ export class IsomorphicGit extends GitManager {
         return Promise.all(
             logs.map(async (log) => {
                 const completeMessage = log.commit.message.split("\n\n");
+                // Root commits have no parent - `getFileChangesCount` would fall
+                // back to diffing against HEAD if passed `undefined` instead of
+                // being skipped, silently showing the wrong diff.
+                const parentOid = log.commit.parent.first();
 
                 return {
                     message: completeMessage[0],
@@ -878,29 +977,168 @@ export class IsomorphicGit extends GitManager {
                     },
                     body: completeMessage.slice(1).join("\n\n"),
                     date: new Date(
-                        log.commit.committer.timestamp
+                        log.commit.committer.timestamp * 1000
                     ).toDateString(),
                     diff: {
                         changed: 0,
-                        files: (
-                            await this.getFileChangesCount(
-                                log.commit.parent.first()!,
-                                log.oid
-                            )
-                        ).map<DiffFile>((item) => {
-                            return {
-                                path: item.path,
-                                status: item.type,
-                                vaultPath: this.getRelativeVaultPath(item.path),
-                                hash: log.oid,
-                            };
-                        }),
+                        files: parentOid
+                            ? (
+                                  await this.getFileChangesCount(
+                                      parentOid,
+                                      log.oid
+                                  )
+                              ).map<DiffFile>((item) => ({
+                                  path: item.path,
+                                  status: item.type,
+                                  vaultPath: this.getRelativeVaultPath(
+                                      item.path
+                                  ),
+                                  hash: log.oid,
+                              }))
+                            : [],
                     },
                     hash: log.oid,
-                    refs: [],
+                    parents: log.commit.parent,
+                    refs: refMap.get(log.oid) ?? [],
                 };
             })
         );
+    }
+
+    /**
+     * Combined, deduplicated commit history across all local branches (never
+     * remote-tracking branches), newest first, for rendering the commit
+     * graph. Supports offset-based pagination via `limit`/`offset`.
+     */
+    async logGraph(limit: number, offset: number): Promise<LogEntry[]> {
+        const repo = this.getRepo();
+        const refMap = await this.buildRefMap();
+        const localBranches = await git.listBranches(repo);
+        const depth = offset + limit;
+
+        const commitsByOid = new Map<string, ReadCommitResult>();
+        for (const branch of localBranches) {
+            const commits = await this.wrapFS(
+                git.log({ ...repo, ref: branch, depth })
+            );
+            for (const commit of commits) {
+                if (!commitsByOid.has(commit.oid)) {
+                    commitsByOid.set(commit.oid, commit);
+                }
+            }
+        }
+
+        const sorted = [...commitsByOid.values()].sort(
+            (a, b) =>
+                b.commit.committer.timestamp - a.commit.committer.timestamp
+        );
+        const page = sorted.slice(offset, offset + limit);
+
+        return Promise.all(
+            page.map(async (log) => {
+                const completeMessage = log.commit.message.split("\n\n");
+                const parentOid = log.commit.parent.first();
+
+                return {
+                    message: completeMessage[0],
+                    author: {
+                        name: log.commit.author.name,
+                        email: log.commit.author.email,
+                    },
+                    body: completeMessage.slice(1).join("\n\n"),
+                    date: new Date(
+                        log.commit.committer.timestamp * 1000
+                    ).toDateString(),
+                    diff: {
+                        changed: 0,
+                        files: parentOid
+                            ? (
+                                  await this.getFileChangesCount(
+                                      parentOid,
+                                      log.oid
+                                  )
+                              ).map<DiffFile>((item) => ({
+                                  path: item.path,
+                                  status: item.type,
+                                  vaultPath: this.getRelativeVaultPath(
+                                      item.path
+                                  ),
+                                  hash: log.oid,
+                              }))
+                            : [],
+                    },
+                    hash: log.oid,
+                    parents: log.commit.parent,
+                    refs: refMap.get(log.oid) ?? [],
+                };
+            })
+        );
+    }
+
+    /**
+     * Maps each commit oid to the local branches, remote-tracking branches,
+     * and tags that point at it, plus a synthetic `HEAD` entry on the tip of
+     * the currently checked out branch.
+     */
+    private async buildRefMap(): Promise<Map<string, RefInfo[]>> {
+        const repo = this.getRepo();
+        const refMap = new Map<string, RefInfo[]>();
+        const addRef = (oid: string, ref: RefInfo) => {
+            const existing = refMap.get(oid);
+            if (existing) {
+                existing.push(ref);
+            } else {
+                refMap.set(oid, [ref]);
+            }
+        };
+
+        const current = await git.currentBranch(repo);
+        const localBranches = await git.listBranches(repo);
+        for (const branch of localBranches) {
+            try {
+                const oid = await this.resolveRef(branch);
+                addRef(oid, { name: branch, type: "local-branch" });
+                if (branch === current) {
+                    addRef(oid, { name: "HEAD", type: "head" });
+                }
+            } catch {
+                // Ref could not be resolved; skip it.
+            }
+        }
+
+        const remotes = await git.listRemotes(repo);
+        for (const remote of remotes) {
+            try {
+                const remoteBranches = await git.listBranches({
+                    ...repo,
+                    remote: remote.remote,
+                });
+                for (const branch of remoteBranches) {
+                    if (branch === "HEAD") continue;
+                    const name = `${remote.remote}/${branch}`;
+                    try {
+                        const oid = await this.resolveRef(name);
+                        addRef(oid, { name, type: "remote-branch" });
+                    } catch {
+                        // Ref could not be resolved; skip it.
+                    }
+                }
+            } catch {
+                // Remote branches could not be listed; skip this remote.
+            }
+        }
+
+        const tags = await this.listTags();
+        for (const tag of tags) {
+            try {
+                const oid = await this.resolveRef(tag);
+                addRef(oid, { name: tag, type: "tag" });
+            } catch {
+                // Ref could not be resolved; skip it.
+            }
+        }
+
+        return refMap;
     }
 
     updateBasePath(basePath: string): Promise<void> {
@@ -1253,7 +1491,7 @@ export class IsomorphicGit extends GitManager {
         };
     }
 
-    private async checkAuthorInfo(): Promise<void> {
+    private async checkAuthorInfo(): Promise<{ name: string; email: string }> {
         const name = await this.getConfig("user.name");
         const email = await this.getConfig("user.email");
         if (!name || !email) {
@@ -1261,6 +1499,7 @@ export class IsomorphicGit extends GitManager {
                 "Git author name and email are not set. Please set both fields in the settings."
             );
         }
+        return { name, email };
     }
 
     private showNotice(message: string, infinity = true): Notice | undefined {

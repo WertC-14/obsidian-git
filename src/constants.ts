@@ -8,6 +8,9 @@ export const GIT_LINE_AUTHORING_MOVEMENT_DETECTION_MINIMAL_LENGTH = 40;
 
 export const CONFLICT_OUTPUT_FILE = "conflict-files-obsidian-git.md";
 
+/** Commits fetched per page in the commit-graph history view. */
+export const COMMIT_GRAPH_PAGE_SIZE = Platform.isMobile ? 40 : 100;
+
 export const DEFAULT_SETTINGS: ObsidianGitSettings = {
     commitMessage: "vault backup: {{date}}",
     autoCommitMessage: "vault backup: {{date}}",

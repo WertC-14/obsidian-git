@@ -3,6 +3,7 @@ import { spawn, type SpawnOptionsWithoutStdio } from "child_process";
 import type { App, ItemView, RGB, WorkspaceLeaf } from "obsidian";
 import { Keymap, Menu, moment, TFile } from "obsidian";
 import { BINARY_EXTENSIONS } from "./constants";
+import type { RefInfo } from "./types";
 
 export function assertNever(x: never): never {
     // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -19,6 +20,47 @@ export function plural(
     } else {
         return `${count} ${plural ?? singular + "s"}`;
     }
+}
+
+/**
+ * Parses the raw ref-decoration string produced by `git log`'s `%D`/`%d`
+ * format (e.g. `"HEAD -> main, origin/main, tag: v1.0"`) into typed refs.
+ *
+ * `remotes` is used to disambiguate a local branch containing a slash
+ * (e.g. `feature/x`) from an actual remote-tracking branch (`origin/main`).
+ */
+export function parseRefDecoration(raw: string, remotes: string[]): RefInfo[] {
+    const refs: RefInfo[] = [];
+    for (const rawToken of raw.split(",")) {
+        const token = rawToken.trim();
+        if (token.length === 0) continue;
+
+        if (token.startsWith("HEAD -> ")) {
+            refs.push({ name: "HEAD", type: "head" });
+            refs.push({
+                name: token.slice("HEAD -> ".length),
+                type: "local-branch",
+            });
+            continue;
+        }
+        if (token === "HEAD") {
+            refs.push({ name: "HEAD", type: "head" });
+            continue;
+        }
+        if (token.startsWith("tag: ")) {
+            refs.push({ name: token.slice("tag: ".length), type: "tag" });
+            continue;
+        }
+        const remote = remotes.find(
+            (remote) => token === remote || token.startsWith(remote + "/")
+        );
+        if (remote) {
+            refs.push({ name: token, type: "remote-branch" });
+        } else {
+            refs.push({ name: token, type: "local-branch" });
+        }
+    }
+    return refs;
 }
 
 export const worthWalking = (filepath: string, root?: string) => {

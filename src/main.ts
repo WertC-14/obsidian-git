@@ -91,6 +91,10 @@ export default class ObsidianGit extends Plugin {
     intervalsToClear: number[] = [];
     editorIntegration: EditorIntegration = new EditorIntegration(this);
     hunkActions = new HunkActions(this);
+    // Shown once per session the first time a mobile (IsomorphicGit) user touches stash -
+    // that backend only stashes loose objects and pop/apply can silently overwrite
+    // conflicting changes, unlike the desktop SimpleGit backend.
+    private mobileStashWarningShown = false;
 
     /**
      * Debouncer for the refresh of the git status for the source control view after file changes.
@@ -1410,6 +1414,161 @@ export default class ObsidianGit extends Plugin {
         }
         this.app.workspace.trigger("obsidian-git:refresh");
         return result;
+    }
+
+    /** Shows a one-time-per-session disclosure before the first stash action on mobile. */
+    private warnAboutMobileStashIfNeeded(): void {
+        if (
+            !(this.gitManager instanceof SimpleGit) &&
+            !this.mobileStashWarningShown
+        ) {
+            this.mobileStashWarningShown = true;
+            new Notice(
+                "Stash on mobile has limitations: files stored as packed objects may not be stashed, " +
+                    "and applying/popping a stash overwrites conflicting changes without warning.",
+                10000
+            );
+        }
+    }
+
+    async stashChanges(): Promise<boolean> {
+        if (!(await this.isAllInitialized())) return false;
+
+        const status = await this.gitManager.status();
+        if (status.changed.length === 0 && status.staged.length === 0) {
+            this.displayMessage("No changes to stash");
+            return false;
+        }
+
+        this.warnAboutMobileStashIfNeeded();
+
+        const message = await new GeneralModal(this, {
+            placeholder: "Stash message (optional)",
+            allowEmpty: true,
+        }).openAndGetResult();
+        if (message == undefined) return false;
+
+        let includeUntracked = false;
+        if (this.gitManager instanceof SimpleGit) {
+            // Only offer this toggle where it actually works - isomorphic-git's stash has
+            // no untracked-file support at all, so don't show a control that silently
+            // no-ops on mobile.
+            const untrackedAnswer = await new GeneralModal(this, {
+                options: ["Tracked changes only", "Include untracked files"],
+                placeholder: "What to stash?",
+                onlySelection: true,
+            }).openAndGetResult();
+            if (untrackedAnswer == undefined) return false;
+            includeUntracked = untrackedAnswer === "Include untracked files";
+        }
+
+        await this.gitManager.stashPush({
+            message: message || undefined,
+            includeUntracked,
+        });
+        this.displayMessage("Stashed changes");
+        this.app.workspace.trigger("obsidian-git:refresh");
+        return true;
+    }
+
+    private async pickStash(placeholder: string): Promise<number | undefined> {
+        const stashes = await this.gitManager.listStashes();
+        if (stashes.length === 0) {
+            this.displayMessage("No stashes found");
+            return undefined;
+        }
+        const options = stashes.map((s) => `stash@{${s.index}}: ${s.message}`);
+        const picked = await new GeneralModal(this, {
+            options,
+            placeholder,
+            onlySelection: true,
+        }).openAndGetResult();
+        if (picked == undefined) return undefined;
+        return stashes[options.indexOf(picked)].index;
+    }
+
+    async popStash(): Promise<void> {
+        if (!(await this.isAllInitialized())) return;
+        this.warnAboutMobileStashIfNeeded();
+        const index = await this.pickStash("Pop stash");
+        if (index == undefined) return;
+        await this.gitManager.stashPop(index);
+        this.displayMessage("Popped stash");
+        this.app.workspace.trigger("obsidian-git:refresh");
+    }
+
+    async applyStash(): Promise<void> {
+        if (!(await this.isAllInitialized())) return;
+        this.warnAboutMobileStashIfNeeded();
+        const index = await this.pickStash("Apply stash");
+        if (index == undefined) return;
+        await this.gitManager.stashApply(index);
+        this.displayMessage("Applied stash");
+        this.app.workspace.trigger("obsidian-git:refresh");
+    }
+
+    async dropStash(): Promise<void> {
+        if (!(await this.isAllInitialized())) return;
+        this.warnAboutMobileStashIfNeeded();
+        const index = await this.pickStash("Drop stash");
+        if (index == undefined) return;
+        const confirm = await new GeneralModal(this, {
+            options: ["YES", "NO"],
+            placeholder: `Permanently delete stash@{${index}}? This cannot be undone.`,
+            onlySelection: true,
+        }).openAndGetResult();
+        if (confirm !== "YES") return;
+        await this.gitManager.stashDrop(index);
+        this.displayMessage("Dropped stash");
+        this.app.workspace.trigger("obsidian-git:refresh");
+    }
+
+    async createTag(): Promise<string | undefined> {
+        if (!(await this.isAllInitialized())) return;
+
+        const name = await new GeneralModal(this, {
+            placeholder: "Tag name",
+        }).openAndGetResult();
+        if (name == undefined) return;
+
+        const message = await new GeneralModal(this, {
+            placeholder:
+                "Tag message (optional, leave empty for a lightweight tag)",
+            allowEmpty: true,
+        }).openAndGetResult();
+        if (message == undefined) return;
+
+        await this.gitManager.createTag({
+            name,
+            message: message || undefined,
+        });
+        this.displayMessage(`Created tag ${name}`);
+        // Tags are shown as ref badges on the commit graph - without this, the graph
+        // wouldn't pick up the new tag until some unrelated action (commit/pull/switch)
+        // happened to trigger a refresh, making the change look like it hadn't "taken".
+        this.app.workspace.trigger("obsidian-git:head-change");
+        return name;
+    }
+
+    async deleteTag(): Promise<string | undefined> {
+        if (!(await this.isAllInitialized())) return;
+
+        const tags = await this.gitManager.listTags();
+        if (tags.length === 0) {
+            this.displayMessage("No tags found");
+            return;
+        }
+        const name = await new GeneralModal(this, {
+            options: tags,
+            placeholder: "Delete tag",
+            onlySelection: true,
+        }).openAndGetResult();
+        if (name == undefined) return;
+
+        await this.gitManager.deleteTag(name);
+        this.displayMessage(`Deleted tag ${name}`);
+        this.app.workspace.trigger("obsidian-git:head-change");
+        return name;
     }
 
     async handleConflict(conflicted?: string[]): Promise<void> {

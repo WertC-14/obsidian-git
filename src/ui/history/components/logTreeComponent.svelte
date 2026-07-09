@@ -4,13 +4,13 @@
     import type ObsidianGit from "src/main";
     import type { HistoryRootTreeItem, TreeItem } from "src/types";
     import { slide } from "svelte/transition";
-    import type HistoryView from "../historyView";
+    import type { LogHostView } from "../logHostView";
     import LogFileComponent from "./logFileComponent.svelte";
 
     interface Props {
         hierarchy: HistoryRootTreeItem;
         plugin: ObsidianGit;
-        view: HistoryView;
+        view: LogHostView;
         topLevel?: boolean;
         closed: Record<string, boolean>;
     }

@@ -427,6 +427,54 @@ export function addCommmands(plugin: ObsidianGit) {
     });
 
     plugin.addCommand({
+        id: "stash-changes",
+        name: "Stash changes",
+        callback: () => {
+            plugin.stashChanges().catch((e) => plugin.displayError(e));
+        },
+    });
+
+    plugin.addCommand({
+        id: "pop-stash",
+        name: "Pop stash",
+        callback: () => {
+            plugin.popStash().catch((e) => plugin.displayError(e));
+        },
+    });
+
+    plugin.addCommand({
+        id: "apply-stash",
+        name: "Apply stash",
+        callback: () => {
+            plugin.applyStash().catch((e) => plugin.displayError(e));
+        },
+    });
+
+    plugin.addCommand({
+        id: "drop-stash",
+        name: "Drop stash",
+        callback: () => {
+            plugin.dropStash().catch((e) => plugin.displayError(e));
+        },
+    });
+
+    plugin.addCommand({
+        id: "create-tag",
+        name: "Create tag",
+        callback: () => {
+            plugin.createTag().catch((e) => plugin.displayError(e));
+        },
+    });
+
+    plugin.addCommand({
+        id: "delete-tag",
+        name: "Delete tag",
+        callback: () => {
+            plugin.deleteTag().catch((e) => plugin.displayError(e));
+        },
+    });
+
+    plugin.addCommand({
         id: "discard-all",
         name: "CAUTION: Discard all changes",
         callback: async () => {

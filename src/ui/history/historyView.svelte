@@ -1,10 +1,12 @@
 <script lang="ts">
     import { setIcon } from "obsidian";
-    import { SimpleGit } from "src/gitManager/simpleGit";
+    import { COMMIT_GRAPH_PAGE_SIZE } from "src/constants";
     import type ObsidianGit from "src/main";
-    import type { LogEntry } from "src/types";
+    import type { LogEntry, Status } from "src/types";
+    import { getDisplayPath } from "src/utils";
     import { onMount } from "svelte";
-    import LogComponent from "./components/logComponent.svelte";
+    import { assignLanes } from "./graph/laneAssignment";
+    import GraphRowComponent from "./components/graphRow.svelte";
     import type HistoryView from "./historyView";
 
     interface Props {
@@ -17,14 +19,28 @@
     let buttons: HTMLElement[] = $state([]);
     let logs: LogEntry[] | undefined = $state();
     let showTree: boolean = $state(plugin.settings.treeStructure);
+    let status: Status | undefined = $state(plugin.cachedStatus);
+    let uncommittedOpen = $state(false);
+    let page = $state(0);
+    let hasMore = $state(true);
 
-    let layoutBtn: HTMLElement | undefined = $state();
+    const LANE_WIDTH = 16;
 
-    $effect(() => {
-        if (layoutBtn) {
-            layoutBtn.empty();
-        }
-    });
+    let nodes = $derived(assignLanes(logs ?? []));
+    let laneCount = $derived(
+        Math.max(
+            0,
+            ...nodes.flatMap((n) => [
+                n.lane,
+                ...n.passThroughLanes.map((p) => p.lane),
+                ...n.parentLanes.map((p) => p.lane),
+                ...n.convergingLanes.map((c) => c.lane),
+            ])
+        ) + 1
+    );
+    let hasUncommittedChanges = $derived(
+        (status?.staged.length ?? 0) + (status?.changed.length ?? 0) > 0
+    );
 
     onMount(() => {
         view.registerEvent(
@@ -33,26 +49,16 @@
                 () => void refresh().catch(console.error)
             )
         );
+        view.registerEvent(
+            view.app.workspace.on(
+                "obsidian-git:status-changed",
+                () => (status = plugin.cachedStatus)
+            )
+        );
     });
 
     $effect(() => {
         buttons.forEach((btn) => setIcon(btn, btn.getAttr("data-icon")!));
-    });
-
-    onMount(() => {
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && !loading) {
-                appendLogs().catch(console.error);
-            }
-        });
-        const sentinel = activeDocument.querySelector("#sentinel");
-        if (sentinel) {
-            observer.observe(sentinel);
-        }
-
-        return () => {
-            observer.disconnect();
-        };
     });
 
     refresh().catch(console.error);
@@ -64,36 +70,30 @@
     async function refresh() {
         if (!plugin.gitReady) {
             logs = undefined;
+            hasMore = true;
             return;
         }
         loading = true;
-        const isSimpleGit = plugin.gitManager instanceof SimpleGit;
-        let limit;
-        if ((logs?.length ?? 0) == 0) {
-            limit = isSimpleGit ? 50 : 10;
-        } else {
-            limit = logs!.length;
-        }
-        logs = await plugin.gitManager.log(undefined, false, limit);
+        status = plugin.cachedStatus;
+        page = 0;
+        logs = await plugin.gitManager.logGraph(COMMIT_GRAPH_PAGE_SIZE, 0);
+        hasMore = logs.length === COMMIT_GRAPH_PAGE_SIZE;
         loading = false;
     }
 
-    async function appendLogs() {
-        if (!plugin.gitReady || logs === undefined) {
+    async function loadMore() {
+        if (!plugin.gitReady || logs === undefined || loading) {
             return;
         }
         loading = true;
-        const isSimpleGit = plugin.gitManager instanceof SimpleGit;
-        const limit = isSimpleGit ? 50 : 10;
-        const newLogs = await plugin.gitManager.log(
-            undefined,
-            false,
-            limit,
-            logs.last()?.hash
+        const nextPage = page + 1;
+        const newLogs = await plugin.gitManager.logGraph(
+            COMMIT_GRAPH_PAGE_SIZE,
+            nextPage * COMMIT_GRAPH_PAGE_SIZE
         );
-        // Remove the first element of the new logs, as it is the same as the last element of the current logs.
-        // And don't use hash^ as it fails for the first commit.
-        logs.push(...newLogs.slice(1));
+        logs.push(...newLogs);
+        page = nextPage;
+        hasMore = newLogs.length === COMMIT_GRAPH_PAGE_SIZE;
         loading = false;
     }
 </script>
@@ -131,16 +131,122 @@
     <div class="nav-files-container" style="position: relative;">
         {#if logs}
             <div class="tree-item nav-folder mod-root">
-                {#each logs as log}
-                    <LogComponent {view} {showTree} {log} {plugin} />
+                {#if hasUncommittedChanges && status}
+                    <div
+                        class="tree-item uncommitted-row"
+                        class:is-collapsed={!uncommittedOpen}
+                    >
+                        <div
+                            class="tree-item-self is-clickable nav-folder-title uncommitted-header"
+                            onclick={() => (uncommittedOpen = !uncommittedOpen)}
+                        >
+                            <div
+                                class="graph-lanes"
+                                style="width: {laneCount * LANE_WIDTH}px"
+                            >
+                                <div class="graph-dot-uncommitted"></div>
+                            </div>
+                            <div
+                                class="tree-item-inner nav-folder-title-content"
+                            >
+                                Uncommitted changes
+                            </div>
+                            <span class="tree-item-flair"
+                                >{status.staged.length +
+                                    status.changed.length}</span
+                            >
+                        </div>
+                        {#if uncommittedOpen}
+                            <div class="tree-item-children">
+                                {#if status.staged.length > 0}
+                                    <div class="uncommitted-group-title">
+                                        Staged
+                                    </div>
+                                    {#each status.staged as file (file.vaultPath)}
+                                        <div class="uncommitted-file">
+                                            {getDisplayPath(file.vaultPath)}
+                                        </div>
+                                    {/each}
+                                {/if}
+                                {#if status.changed.length > 0}
+                                    <div class="uncommitted-group-title">
+                                        Changes
+                                    </div>
+                                    {#each status.changed as file (file.vaultPath)}
+                                        <div class="uncommitted-file">
+                                            {getDisplayPath(file.vaultPath)}
+                                        </div>
+                                    {/each}
+                                {/if}
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+                {#each logs as log, i (log.hash)}
+                    <GraphRowComponent
+                        {log}
+                        node={nodes[i]}
+                        {laneCount}
+                        {showTree}
+                        {plugin}
+                        {view}
+                    />
                 {/each}
             </div>
         {/if}
-        <div id="sentinel"></div>
-        <!-- Ensure that the sentinel item is reachable with the overlaying status bar and indicate that the end of the list is reached  -->
+        {#if hasMore}
+            <div class="git-load-more">
+                <button disabled={loading} onclick={loadMore}>
+                    {loading ? "Loading..." : "Load more"}
+                </button>
+            </div>
+        {/if}
+        <!-- Ensure the load-more button is reachable above the overlaying status bar -->
         <div style="margin-bottom:40px"></div>
     </div>
 </main>
 
 <style lang="scss">
+    .graph-lanes {
+        position: relative;
+        flex: 0 0 auto;
+        align-self: stretch;
+    }
+
+    .graph-dot-uncommitted {
+        position: absolute;
+        left: 8px;
+        top: 16px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        border: 2px dashed var(--text-muted);
+        transform: translate(-4px, -4px);
+    }
+
+    .uncommitted-header {
+        align-items: center;
+    }
+
+    .uncommitted-group-title {
+        padding: var(--size-2-1) var(--size-4-2);
+        color: var(--text-muted);
+        font-size: var(--font-ui-smaller);
+        font-weight: var(--font-medium);
+    }
+
+    .uncommitted-file {
+        padding: var(--size-2-1) var(--size-4-3);
+        color: var(--text-muted);
+        font-size: var(--font-ui-small);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .git-load-more {
+        display: flex;
+        justify-content: center;
+        padding: var(--size-4-2);
+    }
 </style>

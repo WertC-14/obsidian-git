@@ -3,13 +3,13 @@
     import type ObsidianGit from "src/main";
     import type { LogEntry } from "src/types";
     import { slide } from "svelte/transition";
-    import type HistoryView from "../historyView";
+    import type { LogHostView } from "../logHostView";
     import LogFileComponent from "./logFileComponent.svelte";
     import LogTreeComponent from "./logTreeComponent.svelte";
 
     interface Props {
         log: LogEntry;
-        view: HistoryView;
+        view: LogHostView;
         showTree: boolean;
         plugin: ObsidianGit;
     }
@@ -28,6 +28,7 @@
     );
     let isCollapsed = $state(true);
     let closed = $state<Record<string, boolean>>({});
+    let refNames = $derived(log.refs.map((ref) => ref.name));
 
     function authorToString(log: LogEntry) {
         const name = log.author.name;
@@ -47,7 +48,7 @@
     <div class="tree-item nav-folder" class:is-collapsed={isCollapsed}>
         <div
             class="tree-item-self is-clickable nav-folder-title"
-            aria-label={`${log.refs.length > 0 ? log.refs.join(", ") + "\n" : ""}${log.author?.name}
+            aria-label={`${refNames.length > 0 ? refNames.join(", ") + "\n" : ""}${log.author?.name}
 ${moment(log.date).format(plugin.settings.commitDateFormat)}
 ${log.message}`}
             data-tooltip-position={side}
@@ -72,11 +73,6 @@ ${log.message}`}
                 >
             </div>
             <div>
-                {#if log.refs.length > 0}
-                    <div class="git-ref">
-                        {log.refs.join(", ")}
-                    </div>
-                {/if}
                 {#if plugin.settings.authorInHistoryView != "hide" && log.author?.name}
                     <div class="git-author">
                         {authorToString(log)}

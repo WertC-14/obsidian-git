@@ -236,11 +236,19 @@ export enum CurrentGitAction {
     push,
 }
 
+export type RefType = "head" | "local-branch" | "remote-branch" | "tag";
+
+export interface RefInfo {
+    name: string;
+    type: RefType;
+}
+
 export interface LogEntry {
     hash: string;
     date: string;
     message: string;
-    refs: string[];
+    refs: RefInfo[];
+    parents: string[];
     body: string;
     diff: DiffEntry;
     author: {
@@ -275,6 +283,16 @@ export interface BranchInfo {
     current?: string;
     tracking?: string;
     branches: string[];
+}
+
+export interface StashEntry {
+    /** Position in the stash list, 0 = most recent (`stash@{0}`). */
+    index: number;
+    message: string;
+    /** Parsed from a "WIP on <branch>:" prefix when present. */
+    branch?: string;
+    /** Only available from SimpleGit's `stashList()`; left undefined on IsomorphicGit. */
+    date?: string;
 }
 
 export interface TreeItem<T = DiffFile | FileStatusResult> {

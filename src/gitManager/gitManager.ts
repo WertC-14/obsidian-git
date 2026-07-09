@@ -6,6 +6,7 @@ import type {
     DiffFile,
     FileStatusResult,
     LogEntry,
+    StashEntry,
     Status,
     TreeItem,
     UnstagedFile,
@@ -44,6 +45,25 @@ export abstract class GitManager {
     abstract discard(filepath: string): Promise<void>;
 
     abstract discardAll(_: { dir?: string; status?: Status }): Promise<void>;
+
+    abstract stashPush(_: {
+        message?: string;
+        includeUntracked?: boolean;
+    }): Promise<void>;
+
+    abstract stashPop(index?: number): Promise<void>;
+
+    abstract stashApply(index?: number): Promise<void>;
+
+    abstract stashDrop(index?: number): Promise<void>;
+
+    abstract listStashes(): Promise<StashEntry[]>;
+
+    abstract createTag(_: { name: string; message?: string }): Promise<void>;
+
+    abstract deleteTag(name: string): Promise<void>;
+
+    abstract listTags(): Promise<string[]>;
 
     /**
      * Use this method instead of {@link GitManager.status} to delete untracked files, becase on native git
@@ -114,6 +134,13 @@ export abstract class GitManager {
         limit?: number,
         ref?: string
     ): Promise<LogEntry[]>;
+
+    /**
+     * Combined, deduplicated commit history across all local branches (never
+     * remote-tracking branches), newest first, for rendering the commit
+     * graph. Supports offset-based pagination via `limit`/`offset`.
+     */
+    abstract logGraph(limit: number, offset: number): Promise<LogEntry[]>;
 
     abstract getRemoteBranches(remote: string): Promise<string[]>;
 

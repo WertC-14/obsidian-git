@@ -130,10 +130,6 @@
     color: var(--text-accent);
 }
 
-.git-ref {
-    color: var(--text-accent);
-}
-
 /* ====== diff2html ======
 The following styles are adapted from the obsidian-version-history plugin by
 @kometenstaub https://github.com/kometenstaub/obsidian-version-history-diff/blob/main/src/styles.scss

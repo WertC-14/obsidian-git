@@ -42,15 +42,27 @@
 
 ### Source Control Paneli
 
-Branch pill + "..." menüsüyle sadeleşmiş toolbar, Staged/Changes listeleri ve altında gömülü Graph bölümü.
+Branch pill + "..." menüsüyle sadeleşmiş toolbar, Staged/Changes listeleri (dosya durumları M/U/D olarak renkli gösteriliyor) ve commit mesajı kutusu.
 
 ![Source Control Paneli](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/source-view.png)
 
 ### Commit Graph
 
-Birden fazla branch, renkli paralel şeritler, merge noktaları ve tag rozetleriyle.
+Branch'ler renkli paralel şeritlerle, merge noktaları doğru birleşerek, tag rozeti (`v1.0.0`) ve aktif branch rozetiyle gösteriliyor.
 
 ![Commit Graph](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/commit-graph.png)
+
+### Branch Değiştirme
+
+Branch pill'e tıklayınca çıkan hızlı seçim ekranı.
+
+![Branch değiştirme ekranı](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/switch-branch.png)
+
+### Diff View
+
+Bir dosyadaki değişiklikleri yan yana karşılaştırma.
+
+![Diff View örneği](https://raw.githubusercontent.com/WertC-14/obsidian-git/master/images/diff-view-demo.png)
 
 ### Stash & Tags Menüsü
 

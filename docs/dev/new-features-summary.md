@@ -16,23 +16,71 @@ README.md zaten şu dosya adlarına referans veriyor (`images/` klasörüne bu
 isimlerle kaydedersen otomatik bağlanır, README'de başka bir şey
 değiştirmene gerek kalmaz):
 
-| Dosya adı | Neyi gösterecek |
-|---|---|
-| `images/source-view.png` | Yeni toolbar (branch pill + "..." menü) ile Source Control paneli — **mevcut dosyanın üzerine yazılacak**, eski toolbar görüntüsü artık güncel değil |
-| `images/commit-graph.png` | Renkli dallı commit graph (merge noktası + tag rozeti + HEAD halkası görünecek şekilde) |
-| `images/stash-tags-menu.png` | "..." menüsünde Stash ve Tags gruplarının açık hali |
-| `images/brat-1-install.png` | Obsidian Community Plugins aramasında BRAT eklentisinin bulunup "Install" butonuna basılacağı an |
-| `images/brat-2-add-beta-plugin.png` | BRAT'ın kendi ayarlar sayfası, "Add Beta Plugin" butonu görünecek şekilde |
-| `images/brat-3-enter-repo.png` | "Add Beta Plugin" tıklanınca açılan diyalog kutusu — `WertC-14/obsidian-git` yazılmış/yazılacak alan görünecek şekilde |
-| `images/brat-4-enable-plugin.png` | BRAT kurulumu bitince Settings → Community plugins listesinde "Git" eklentisinin göründüğü ve aç/kapa (toggle) düğmesinin bulunduğu an |
+| Dosya adı | Neyi gösterecek | Durum |
+|---|---|---|
+| `images/source-view.png` | Source Control paneli (Staged/Changes, commit kutusu) | ✅ eklendi |
+| `images/commit-graph.png` | Renkli dallı commit graph, tag rozeti, merge | ✅ eklendi |
+| `images/switch-branch.png` | Branch pill'e tıklayınca çıkan "Select branch to checkout" ekranı | ✅ eklendi |
+| `images/diff-view-demo.png` | Bir dosyanın diff/karşılaştırma ekranı | ✅ eklendi |
+| `images/stash-tags-menu.png` | "..." menüsünde Stash ve Tags gruplarının açık hali | ⏳ bekliyor |
+| `images/brat-1-install.png` | Obsidian Community Plugins aramasında BRAT eklentisinin bulunup "Install" butonuna basılacağı an | ⏳ bekliyor |
+| `images/brat-2-add-beta-plugin.png` | BRAT'ın kendi ayarlar sayfası, "Add Beta Plugin" butonu görünecek şekilde | ⏳ bekliyor |
+| `images/brat-3-enter-repo.png` | "Add Beta Plugin" tıklanınca açılan diyalog kutusu — `WertC-14/obsidian-git` yazılmış/yazılacak alan görünecek şekilde | ⏳ bekliyor |
+| `images/brat-4-enable-plugin.png` | BRAT kurulumu bitince Settings → Community plugins listesinde "Git" eklentisinin göründüğü ve aç/kapa (toggle) düğmesinin bulunduğu an | ⏳ bekliyor |
 
-README artık orijinal projenin History View / Diff View / Signs
-ekran görüntülerini içermiyor (`images/history-view.png`,
-`images/diff-view.png`, `images/signs.png` hâlâ repoda duruyorlar ama
-README bunlara referans vermiyor) — README artık sadece bu fork'a özgü
-şeyleri gösteriyor, değişmeyen özellikler için orijinal dokümantasyona
-link veriyor. Toplam 7 tane fotoğraf/ekran görüntüsü lazım (3 özellik
-görseli + 4 BRAT adım görseli).
+Kalan 5 tanesi için de aynı şekilde ekran görüntüsü paylaşman yeterli,
+ben `images/` klasörüne kaydedip README'ye bağlarım.
+
+README artık orijinal projenin History View / Signs ekran görüntülerini
+içermiyor (`images/history-view.png`, `images/signs.png`, eski
+`images/diff-view.png` hâlâ repoda duruyorlar ama README bunlara
+referans vermiyor, yeni `diff-view-demo.png` kullanılıyor) — README
+artık sadece bu fork'a özgü şeyleri gösteriyor, değişmeyen özellikler
+için orijinal dokümantasyona link veriyor.
+
+## Test Vault'ta Hazırladığım Örnek Veri (Screenshot İçin)
+
+Test vault'un git reposu (`Git-Deneme`, `~/Documents/Obsidian Vault - 1/Git-Deneme`
+altında) boş/sıkıcı görünmesin diye şu örnek durumu kurdum — Obsidian'ı açıp
+Source Control panelini açtığında şunları göreceksin:
+
+- **Staged Changes** (2 dosya):
+  - `main-only-note.md` — değiştirilmiş (M)
+  - `Tarifler/Elmalı Kek.md` — değiştirilmiş (M)
+- **Changes** (3 dosya, henüz stage edilmemiş):
+  - `Deneme - 1.md` — değiştirilmiş (M)
+  - `Silinecek Not.md` — silinmiş (D)
+  - `Tarifler/5 Dakikalık Tarifler/Çikolatalı Puding.md` — yeni/untracked (U),
+    **iki seviye iç içe klasör** altında — tree görünümünde klasör
+    açılıp kapanmasını göstermek için
+- **1 stash**: `"Ekran görüntüsü için örnek stash"` (`graph-test-note.md`
+  dosyasındaki ayrı bir değişiklik) — "..." menüsünden Apply/Pop/Drop
+  stash açtığında listede bu görünecek.
+- **1 tag**: `v1.0.0` (`"Demo release for screenshots"` mesajıyla,
+  annotated), en tepedeki commit'te — hem Tags menüsündeki silme
+  listesinde hem Graph'ta o commit'in yanında rozet olarak görünecek.
+- **Graph**: `main` branch'inin tepesine, eski test isimli commit'lerin
+  ("araba", "sdafsaf" gibi) üstüne 4 tane düzgün/profesyonel isimli commit
+  ekledim (`docs: proje açıklaması güncellendi`, `feat: lazanya tarifi
+  eklendi`, `feat: haftalık plan şablonu eklendi`, `fix: lazanya tarifine
+  ek not eklendi`) — graph'ın en üstü artık gerçek bir proje gibi görünüyor.
+  Eski test commit'leri hâlâ altta duruyor ama ekran görüntüsünde
+  scroll etmeden görünmeyecekler. `main` ve `test-graph-feature`
+  branch'lerinin birleştiği (merge) nokta da daha aşağıda hâlâ duruyor,
+  Graph'ın branch/merge kısmını göstermek istersen biraz aşağı kaydırman
+  gerekebilir.
+
+Bu veriler gerçek notların değil, sırf ekran görüntüsü için uydurma
+içerik. Çekimler bitince temizlemek istersen:
+```
+git tag -d v1.0.0
+git stash drop
+git checkout -- "main-only-note.md"
+git rm --cached "Tarifler/Elmalı Kek.md" && rm -rf Tarifler
+git checkout -- "Deneme - 1.md" "Silinecek Not.md"
+```
+(Son iki dosya `git checkout --` ile HEAD'deki haline döner; silinmiş
+gösterilen `Silinecek Not.md` da böylece geri gelir.)
 
 ---
 
